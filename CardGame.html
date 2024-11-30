@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: url('https://img.freepik.com/free-vector/flat-design-poker-table-background_23-2151047002.jpg?size=626&ext=jpg&ga=GA1.1.2008272138.1723334400&semt=ais_hybrid') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
+        }
+
+        .game-container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            max-width: 800px;
+            width: 90%;
+        }
+
+        h2 {
+            color: #ffcc00;
+            font-size: 28px;
+            margin: 10px 0;
+        }
+
+        #dealer-cards img, #your-cards img {
+            height: 175px;
+            width: 125px;
+            margin: 5px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        button {
+            width: 120px;
+            height: 50px;
+            font-size: 18px;
+            border-radius: 12px;
+            border: none;
+            outline: none;
+            color: white;
+            margin: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s, background-color 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            background-color: #ffcc00;
+            
+        }
+
+        #hit {
+            background-color: #ff0000;
+        }
+
+        #stay {
+            background-color: #000000;
+        }
+
+        #Refresh {
+            background-color: #00cc00;
+        }
+
+        #your-sum, #dealer-sum {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffcc00;
+        }
+
+        #results {
+            color: #ffffff;
+            font-size: 36px;
+            font-weight: 700;
+            margin-top: 20px;
+        }
+
+        .but {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h2>You: <span id="your-sum"></span></h2>
+        <div id="your-cards"></div>
+
+        <h2>Dealer: <span id="dealer-sum"></span></h2>
+        <div id="dealer-cards">
+            <img id="hidden" src="./cards/BACK.png">
+        </div>
+
+        <div class="but">
+            <button id="hit">Hit</button>
+            <button id="stay">Stay</button>
+            <button id="Refresh">Play Again</button>
+        </div>
+        <p id="results"></p>
+    </div>
+
+    <script>
+        let dealerSum = 0;
+        let yourSum = 0;
+
+        let dealerAceCount = 0;
+        let yourAceCount = 0; 
+
+        let hidden;
+        let deck;
+
+        let canHit = true; 
+
+        window.onload = function() {
+            buildDeck();
+            shuffleDeck();
+            startGame();
+        }
+
+        function buildDeck() {
+            let values = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+            let types = ["C", "D", "H", "S"];
+            deck = [];
+
+            for (let i = 0; i < types.length; i++) {
+                for (let j = 0; j < values.length; j++) {
+                    deck.push(values[j] + "-" + types[i]);
+                }
+            }
+        }
+
+        function shuffleDeck() {
+            for (let i = 0; i < deck.length; i++) {
+                let j = Math.floor(Math.random() * deck.length);
+                let temp = deck[i];
+                deck[i] = deck[j];
+                deck[j] = temp;
+            }
+        }
+
+        function startGame() {
+            hidden = deck.pop();
+            dealerSum += getValue(hidden);
+            dealerAceCount += checkAce(hidden);
+            
+            while (dealerSum < 17) {
+                let cardImg = document.createElement("img");
+                let card = deck.pop();
+                cardImg.src = "./cards/" + card + ".png";
+                dealerSum += getValue(card);
+                dealerAceCount += checkAce(card);
+                document.getElementById("dealer-cards").append(cardImg);
+            }
+
+            for (let i = 0; i < 2; i++) {
+                let cardImg = document.createElement("img");
+                let card = deck.pop();
+                cardImg.src = "./cards/" + card + ".png";
+                yourSum += getValue(card);
+                yourAceCount += checkAce(card);
+                document.getElementById("your-cards").append(cardImg);
+            }
+
+            document.getElementById("hit").addEventListener("click", hit);
+            document.getElementById("stay").addEventListener("click", stay);
+            document.getElementById("Refresh").addEventListener("click", Refresh);
+        }
+
+        function Refresh(){
+            location.reload();
+        }
+
+        function hit() {
+            if (!canHit) {
+                return;
+            }
+
+            let cardImg = document.createElement("img");
+            let card = deck.pop();
+            cardImg.src = "./cards/" + card + ".png";
+            yourSum += getValue(card);
+            yourAceCount += checkAce(card);
+            document.getElementById("your-cards").append(cardImg);
+
+            if (reduceAce(yourSum, yourAceCount) > 21) {
+                canHit = false;
+                stay();
+            }
+        }
+
+        function stay() {
+            dealerSum = reduceAce(dealerSum, dealerAceCount);
+            yourSum = reduceAce(yourSum, yourAceCount);
+
+            canHit = false;
+            document.getElementById("hidden").src = "./cards/" + hidden + ".png";
+
+            let message = "";
+            if (yourSum > 21) {
+                message = "You Lose!";
+            } else if (dealerSum > 21) {
+                message = "You Win!";
+            } else if (yourSum == dealerSum) {
+                message = "Tie!";
+            } else if (yourSum > dealerSum) {
+                message = "You Win!";
+            } else {
+                message = "You Lose!";
+            }
+
+            document.getElementById("dealer-sum").innerText = dealerSum;
+            document.getElementById("your-sum").innerText = yourSum;
+            document.getElementById("results").innerText = message;
+        }
+
+        function getValue(card) {
+            let data = card.split("-");
+            let value = data[0];
+
+            if (isNaN(value)) {
+                if (value == "A") {
+                    return 11;
+                }
+                return 10;
+            }
+            return parseInt(value);
+        }
+
+        function checkAce(card) {
+            return card[0] == "A" ? 1 : 0;
+        }
+
+        function reduceAce(playerSum, playerAceCount) {
+            while (playerSum > 21 && playerAceCount > 0) {
+                playerSum -= 10;
+                playerAceCount -= 1;
+            }
+            return playerSum;
+        }
+    </script>
+</body> 
+</html>
